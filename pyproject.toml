@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "opc-ua-module"
+version = "1.0.0"
+description = "OPC-UA log fetcher"
+license = "GPL-3.0-or-later"
+authors = ["Airbus CyberSecurity SAS"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+asyncua = "^1.0.0"
+rfc5424-logging-handler = "^1.4.3"
+
+[tool.poetry.scripts]
+opc-ua-listen = 'opc_ua_module.main:run'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

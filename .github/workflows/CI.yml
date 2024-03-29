@@ -1,0 +1,60 @@
+# This file is part of OPC-UA Log Fetcher.
+#
+# Copyright (C) 2023 Airbus CyberSecurity SAS
+#
+# OPC-UA Log Fetcher is free software: you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation, either version 3 of the License, or (at your option) any
+# later version.
+#
+# OPC-UA Log Fetcher is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# OPC-UA Log Fetcher. If not, see <https://www.gnu.org/licenses/>.
+
+name: CI
+
+on:
+  push:
+
+jobs:
+  docker_build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install poetry
+        run: pip install poetry
+      - name: Get version number
+        id: get-version
+        run: echo "version=$(poetry version -s)" >> $GITHUB_OUTPUT
+      - name: Build Wheel
+        run: poetry build -f wheel -o docker
+      - name: Build docker
+        uses: docker/build-push-action@v5
+        with:
+          context: docker
+          build-args: MODULE_VERSION=${{ steps.get-version.outputs.version }}
+          tags: opc-ua-log-fetcher:${{ steps.get-version.outputs.version }}
+          load: true
+      - name: Save results
+        run: docker save opc-ua-log-fetcher:${{ steps.get-version.outputs.version }} | gzip > opc-ua-log-fetcher-${{ steps.get-version.outputs.version }}.docker.tar.gz
+      - name: Prepare release
+        run: zip opc-ua-log-fetcher-${{ steps.get-version.outputs.version }}.docker.zip COPYING LICENSE opc-ua-log-fetcher-${{ steps.get-version.outputs.version }}.docker.tar.gz
+      - name: Save as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opc-ua-log-fetcher
+          path: opc-ua-log-fetcher-${{ steps.get-version.outputs.version }}.docker.zip
+          if-no-files-found: error
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: opc-ua-log-fetcher-${{ steps.get-version.outputs.version }}.docker.zip
+          fail_on_unmatched_files: true
